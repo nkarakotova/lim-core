@@ -51,7 +51,7 @@ func (d *DirectionServiceImplementation) GetByName(name string) (*models.Directi
 		return nil, err
 	}
 
-	d.logger.Debug("DIRECTION! Successfully GetByName", "name", name)
+	d.logger.Debug("DIRECTION! Success GetByName", "name", name)
 	return direction, nil
 }
 
@@ -69,7 +69,7 @@ func (d *DirectionServiceImplementation) Create(direction *models.Direction) err
 		return err
 	}
 
-	d.logger.Info("DIRECTION! Successfully create direction", "name", direction.Name)
+	d.logger.Info("DIRECTION! Success create direction", "name", direction.Name)
 	return nil
 }
 
@@ -82,7 +82,7 @@ func (d *DirectionServiceImplementation) GetByID(id uint64) (*models.Direction, 
 		return nil, err
 	}
 
-	d.logger.Debug("DIRECTION! Success repository method GetByID", "id", id)
+	d.logger.Debug("DIRECTION! Success GetByID", "id", id)
 	return direction, nil
 }
 
@@ -95,6 +95,6 @@ func (d *DirectionServiceImplementation) GetAll() ([]models.Direction, error) {
 		return nil, err
 	}
 
-	d.logger.Info("DIRECTION! Successsully repository method GetAll")
+	d.logger.Debug("DIRECTION! Success GetAll")
 	return directions, nil
 }

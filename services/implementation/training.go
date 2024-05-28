@@ -48,6 +48,7 @@ func NewTrainingServiceImplementation(
 func (t *TrainingServiceImplementation) validate(ctx context.Context, training *models.Training) error {
 	h, m, s := training.DateTime.Clock()
 	if h < services.FirstTrainingTime || h > services.LastTrainingTime || m != 0 || s != 0 {
+		t.logger.Warn("TRAINING! Incorrect start time", "id", training.ID)
 		return servicesErrors.IncorrectTrainingTime
 	}
 
@@ -74,6 +75,7 @@ func (t *TrainingServiceImplementation) validate(ctx context.Context, training *
 		}
 	}
 	if !flag {
+		t.logger.Warn("TRAINING! Not coach by direction", "id", training.ID, "error", err)
 		return servicesErrors.NotCoachByDirection
 	}
 
@@ -82,8 +84,9 @@ func (t *TrainingServiceImplementation) validate(ctx context.Context, training *
 		t.logger.Warn("TRAINING! Error in repository GetAllByDateTime", "id", training.ID, "error", err)
 		return err
 	}
-	for _, t := range trainings {
-		if t.CoachID == training.CoachID || t.HallID == training.HallID {
+	for _, tr := range trainings {
+		if tr.CoachID == training.CoachID || tr.HallID == training.HallID {
+			t.logger.Warn("TRAINING! Bysy date time", "id", training.ID)
 			return servicesErrors.BysyDateTime
 		}
 	}
@@ -105,7 +108,7 @@ func (t *TrainingServiceImplementation) Create(training *models.Training) error 
 		return err
 	}
 
-	t.logger.Info("TRAINING! Successfully create training", "id", training.ID)
+	t.logger.Info("TRAINING! Success create training", "id", training.ID)
 	return nil
 }
 
@@ -125,7 +128,6 @@ func (t *TrainingServiceImplementation) delete(ctx context.Context, clients []mo
 			return err
 		}
 
-		t.logger.Info("TRAINING! Successfully delete training", "id", id)
 		return nil
 	})
 }
@@ -144,6 +146,7 @@ func (t *TrainingServiceImplementation) Delete(id uint64) error {
 		return err
 	}
 
+	t.logger.Info("TRAINING! Success delete training", "id", id)
 	return nil
 }
 
@@ -157,7 +160,7 @@ func (t *TrainingServiceImplementation) GetByID(id uint64) (*models.Training, er
 		return nil, err
 	}
 
-	t.logger.Debug("TRAINING! Success repository method GetByID", "id", id)
+	t.logger.Debug("TRAINING! Success GetByID", "id", id)
 	return training, nil
 }
 
@@ -171,7 +174,7 @@ func (t *TrainingServiceImplementation) GetAllByClient(id uint64) ([]models.Trai
 		return nil, err
 	}
 
-	t.logger.Info("TRAINING! Successfully repository method GetAllByClient", "id", id)
+	t.logger.Debug("TRAINING! Success GetAllByClient", "id", id)
 	return trainings, nil
 }
 
@@ -184,7 +187,7 @@ func (t *TrainingServiceImplementation) GetAllByCoachOnDate(id uint64, date time
 		return nil, err
 	}
 
-	t.logger.Info("TRAINING! Successfully service method GetAllByCoachOnDate", "id", id)
+	t.logger.Debug("TRAINING! Successfully service method GetAllByCoachOnDate", "id", id)
 	return trainings, nil
 }
 
@@ -198,25 +201,25 @@ func (t *TrainingServiceImplementation) GetAllByDateTime(dateTime time.Time) ([]
 		return nil, err
 	}
 
-	t.logger.Info("TRAINING! Successfully repository method GetAllByDateTime", "dateTime", dateTime)
+	t.logger.Debug("TRAINING! Success GetAllByDateTime", "dateTime", dateTime)
 	return trainings, nil
 }
 
 func (t *TrainingServiceImplementation) GetAllBetweenDateTime(start time.Time, end time.Time) ([]models.Training, error) {
 	if start.After(end) {
+		t.logger.Warn("TRAINING! Start after end", "start", start, "end", end)
 		return nil, servicesErrors.StartDateAfterEndDate
 	}
 
 	ctx := context.Background()
 
 	trainings, err := t.TrainingRepository.GetAllBetweenDateTime(ctx, start, end)
-
 	if err != nil {
 		t.logger.Warn("TRAINING! Error in repository method GetAllBetweenDateTime", "start", start, "end", end, "err", err)
 		return nil, err
 	}
 
-	t.logger.Info("TRAINING! Successfully repository method GetAllBetweenDateTime", "start", start, "end", end)
+	t.logger.Debug("TRAINING! Success GetAllBetweenDateTime", "start", start, "end", end)
 	return trainings, nil
 }
 
@@ -229,6 +232,6 @@ func (t *TrainingServiceImplementation) ReduceAvailablePlacesNum(id uint64) erro
 		return err
 	}
 
-	t.logger.Debug("SUBSCRIPTION! Success repository method ReduceAvailablePlacesNum", "id", id)
+	t.logger.Info("TRAINING! Success ReduceAvailablePlacesNum", "id", id)
 	return nil
 }

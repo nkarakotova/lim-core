@@ -57,16 +57,19 @@ func (c *ClientServiceImplementation) validate(ctx context.Context, client *mode
 	}
 
 	if len(client.Telephone) != TelephoneNumberLen {
+		c.logger.Warn("CLIENT! Client telephone length incorrect", "telephone", client.Telephone)
 		return servicesErrors.ClientTelephoneIncorrect
 	}
 
 	_, err = strconv.Atoi(client.Telephone)
 	if err != nil {
+		c.logger.Warn("CLIENT! Client telephone incorrect", "telephone", client.Telephone)
 		return servicesErrors.ClientTelephoneIncorrect
 	}
 
 	_, err = mail.ParseAddress(client.Mail)
 	if err != nil {
+		c.logger.Warn("CLIENT! Client mail incorrect", "mail", client.Mail)
 		return servicesErrors.ClientMailIncorrect
 	}
 
@@ -82,7 +85,7 @@ func (c *ClientServiceImplementation) GetByTelephone(telephone string) (*models.
 		return nil, err
 	}
 
-	c.logger.Debug("CLIENT! Successfully GetClientByTelephone", "telephone", telephone)
+	c.logger.Debug("CLIENT! Success GetClientByTelephone", "telephone", telephone)
 	return client, nil
 }
 
@@ -100,7 +103,7 @@ func (c *ClientServiceImplementation) Create(client *models.Client) error {
 		return err
 	}
 
-	c.logger.Info("CLIENT! Successfully create client", "login", client.Telephone, "id", client.ID)
+	c.logger.Info("CLIENT! Success create client", "telephone", client.Telephone, "id", client.ID)
 	return nil
 }
 
@@ -109,7 +112,7 @@ func (c *ClientServiceImplementation) Login(telepnone, password string) (*models
 
 	tempClient, err := c.ClientRepository.GetByTelephone(ctx, telepnone)
 	if err != nil && err == repositoriesErrors.EntityDoesNotExists {
-		c.logger.Warn("CLIENT! Error, client with this telephone does not exists", "telephone", telepnone, "error", err)
+		c.logger.Warn("CLIENT! Сlient with this telephone does not exists", "telephone", telepnone, "error", err)
 		return nil, servicesErrors.ClientDoesNotExists
 	} else if err != nil {
 		c.logger.Warn("CLIENT! Error in repository method GetByTelephone", "telepnone", telepnone, "error", err)
@@ -121,7 +124,7 @@ func (c *ClientServiceImplementation) Login(telepnone, password string) (*models
 		return nil, servicesErrors.InvalidPassword
 	}
 
-	c.logger.Info("CLIENT! Success login with", "telepnone", telepnone, "id", tempClient.ID)
+	c.logger.Info("CLIENT! Success login", "telepnone", telepnone, "id", tempClient.ID)
 	return tempClient, nil
 }
 
@@ -134,7 +137,7 @@ func (c *ClientServiceImplementation) GetByID(id uint64) (*models.Client, error)
 		return nil, err
 	}
 
-	c.logger.Debug("CLIENT! Success repository method GetByID", "id", id)
+	c.logger.Debug("CLIENT! Success GetByID", "id", id)
 	return client, nil
 }
 
@@ -276,7 +279,7 @@ func (c *ClientServiceImplementation) СreateAssignment(clientID, trainingID uin
 		return err
 	}
 
-	c.logger.Info("CLIENT! Successfully create assignment", "clientID", clientID, "trainingID", clientID)
+	c.logger.Info("CLIENT! Success create assignment", "clientID", clientID, "trainingID", clientID)
 	return nil
 }
 
@@ -308,7 +311,7 @@ func (c *ClientServiceImplementation) DeleteAssignment(clientID, trainingID uint
 			return err
 		}
 
-		c.logger.Info("CLIENT! Successfully delete assignment", "clientID", clientID, "trainingID", clientID)
+		c.logger.Info("CLIENT! Success delete assignment", "clientID", clientID, "trainingID", clientID)
 		return nil
 	})
 }

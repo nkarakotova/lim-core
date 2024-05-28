@@ -30,6 +30,7 @@ func NewSubscriptionServiceImplementation(
 
 func (s *SubscriptionServiceImplementation) validate(subscription *models.Subscription) error {
 	if subscription.StartDate.After(subscription.EndDate) {
+		s.logger.Warn("SUBSCRIPTION! Start date after end date", "id", subscription.ID)
 		return servicesErrors.SubscriptionStartDateAfterEndDate
 	}
 
@@ -50,7 +51,7 @@ func (s *SubscriptionServiceImplementation) Create(subscription *models.Subscrip
 		return err
 	}
 
-	s.logger.Info("SUBSCRIPTION! Successfully create subscription", "id", subscription.ID)
+	s.logger.Info("SUBSCRIPTION! Success create subscription", "id", subscription.ID)
 	return nil
 }
 
@@ -63,7 +64,7 @@ func (s *SubscriptionServiceImplementation) GetByID(id uint64) (*models.Subscrip
 		return nil, err
 	}
 
-	s.logger.Debug("SUBSCRIPTION! Success repository method GetByID", "id", id)
+	s.logger.Debug("SUBSCRIPTION! Success GetByID", "id", id)
 	return subscription, nil
 }
 
@@ -76,6 +77,6 @@ func (s *SubscriptionServiceImplementation) ReduceRemainingTrainingsNum(id uint6
 		return err
 	}
 
-	s.logger.Debug("SUBSCRIPTION! Success repository method ReduceRemainingTrainingsNum", "id", id)
+	s.logger.Info("SUBSCRIPTION! Success ReduceRemainingTrainingsNum", "id", id)
 	return nil
 }

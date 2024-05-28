@@ -55,7 +55,7 @@ func (c *CoachServiceImplementation) GetByName(name string) (*models.Coach, erro
 		return nil, err
 	}
 
-	c.logger.Debug("COACH! Successfully GetByName", "name", name)
+	c.logger.Debug("COACH! Success GetByName", "name", name)
 	return coach, nil
 }
 
@@ -73,7 +73,7 @@ func (c *CoachServiceImplementation) Create(coach *models.Coach) error {
 		return err
 	}
 
-	c.logger.Info("COACH! Successfully create coach", "name", coach.Name)
+	c.logger.Info("COACH! Success create coach", "name", coach.Name)
 	return nil
 }
 
@@ -86,7 +86,7 @@ func (c *CoachServiceImplementation) GetByID(id uint64) (*models.Coach, error) {
 		return nil, err
 	}
 
-	c.logger.Debug("COACH! Success repository method GetByID", "id", id)
+	c.logger.Debug("COACH! Success GetByID", "id", id)
 	return coach, nil
 }
 
@@ -99,7 +99,7 @@ func (c *CoachServiceImplementation) AddDirection(coachID, directionID uint64) e
 		return err
 	}
 
-	c.logger.Debug("COACH! Success repository method AddDirection", "id", coachID)
+	c.logger.Debug("COACH! Success AddDirection", "id", coachID)
 	return nil
 }
 
@@ -112,7 +112,7 @@ func (c *CoachServiceImplementation) GetAllByDirection(id uint64) ([]models.Coac
 		return nil, err
 	}
 
-	c.logger.Info("COACH! Successfully repository method GetAllByDirection", "id", id)
+	c.logger.Debug("COACH! Success GetAllByDirection", "id", id)
 	return coaches, nil
 }
 
@@ -152,6 +152,7 @@ func (c *CoachServiceImplementation) GetFreeTimeOnDate(id uint64, date time.Time
 			break
 		}
 	}
-
+	
+	c.logger.Debug("COACH! Success GetFreeTimeOnDate", "id", id)
 	return slots, nil
 }

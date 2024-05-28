@@ -55,7 +55,7 @@ func (h *HallServiceImplementation) GetByNumber(number uint64) (*models.Hall, er
 		return nil, err
 	}
 
-	h.logger.Debug("HALL! Successfully GetByNumber", "number", number)
+	h.logger.Debug("HALL! Success GetByNumber", "number", number)
 	return hall, nil
 }
 
@@ -73,7 +73,7 @@ func (h *HallServiceImplementation) Create(hall *models.Hall) error {
 		return err
 	}
 
-	h.logger.Info("HALL! Successfully create hall", "number", hall.Number)
+	h.logger.Info("HALL! Success create hall", "number", hall.Number)
 	return nil
 }
 
@@ -86,7 +86,7 @@ func (h *HallServiceImplementation) GetByID(id uint64) (*models.Hall, error) {
 		return nil, err
 	}
 
-	h.logger.Debug("HALL! Success repository method GetByID", "id", id)
+	h.logger.Debug("HALL! Success GetByID", "id", id)
 	return hall, nil
 }
 
@@ -95,11 +95,13 @@ func (h *HallServiceImplementation) GetFreeOnDateTime(slot time.Time) (map[uint6
 
 	trainings, err := h.TrainingRepository.GetAllByDateTime(ctx, slot)
 	if err != nil {
+		h.logger.Warn("TRAINING! Error in repository method GetAllByDateTime", "error", err)
 		return nil, err
 	}
 
 	freeHalls, err := h.HallRepository.GetAll(ctx)
 	if err != nil {
+		h.logger.Warn("HALL! Error in repository method GetAll", "error", err)
 		return nil, err
 	}
 
@@ -107,5 +109,6 @@ func (h *HallServiceImplementation) GetFreeOnDateTime(slot time.Time) (map[uint6
 		delete(freeHalls, t.HallID)
 	}
 
+	h.logger.Debug("HALL! Success GetFreeOnDateTime")
 	return freeHalls, nil
 }
