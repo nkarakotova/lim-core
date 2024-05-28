@@ -120,7 +120,7 @@ func (c *CoachServiceImplementation) getAllSlots(date time.Time) []time.Time {
 	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 
 	slots := make([]time.Time, services.LastTrainingTime-services.FirstTrainingTime)
-	slots[0] = date.Add(services.FirstTrainingTime * time.Hour)
+	slots[0] = date.Add(time.Duration(services.FirstTrainingTime) * time.Hour)
 
 	for idx := 1; idx < len(slots); idx++ {
 		slots[idx] = slots[idx-1].Add(time.Hour)

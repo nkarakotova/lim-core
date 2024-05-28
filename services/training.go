@@ -16,5 +16,5 @@ type TrainingService interface {
 	GetAllBetweenDateTime(start time.Time, end time.Time) ([]models.Training, error)
 }
 
-const FirstTrainingTime = 10
-const LastTrainingTime = 22
+var FirstTrainingTime = 10
+var LastTrainingTime = 21
