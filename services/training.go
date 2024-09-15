@@ -17,4 +17,4 @@ type TrainingService interface {
 }
 
 var FirstTrainingTime = 10
-var LastTrainingTime = 21
+var LastTrainingTime = 22
