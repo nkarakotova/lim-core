@@ -130,3 +130,16 @@ func (c *CoachServiceImplementation) GetFreeTimeOnDate(id uint64, date time.Time
 	c.logger.Debug("COACH! Success GetFreeTimeOnDate", "id", id)
 	return slots, nil
 }
+
+func (c *CoachServiceImplementation) GetAll() ([]models.Coach, error) {
+	ctx := context.Background()
+
+	coaches, err := c.CoachRepository.GetAll(ctx)
+	if err != nil {
+		c.logger.Warn("COACH! Error in repository method GetAll", "err", err)
+		return nil, err
+	}
+
+	c.logger.Debug("COACH! Success GetAllByDirection")
+	return coaches, nil
+}

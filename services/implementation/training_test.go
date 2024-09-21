@@ -61,7 +61,6 @@ var testTrainingCreate = []struct {
 
 		Prepare: func(service *mockTrainingService) {
 			ctx := context.Background()
-			service.mockHallRepository.EXPECT().GetByID(ctx, uint64(1)).Return(data_builders.NewHallBuilder().Build(), nil)
 			service.mockTrainingRepository.EXPECT().GetAllByDateTime(ctx, time.Date(2024, 7, 7, 12, 0, 0, 0, time.UTC)).Return(nil, nil)
 			service.mockTrainingRepository.EXPECT().Create(ctx, data_builders.NewTrainingBuilder().Build()).Return(nil)
 		},
@@ -318,111 +317,111 @@ func TestTrainingServiceImplementationCreate(t *testing.T) {
 			})
 		}
 	})
-	// t.Run("DeleteTraining", func(t *testing.T) {
-	// 	for _, tt := range testTrainingDelete {
-	// 		tt := tt
-	// 		t.Run(tt.TestName, func(t *testing.T) {
-	// 			ctrl := gomock.NewController(t)
-	// 			defer ctrl.Finish()
+	t.Run("DeleteTraining", func(t *testing.T) {
+		for _, tt := range testTrainingDelete {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	// 			service := createMockTrainingService(ctrl)
-	// 			tt.Prepare(service)
+				service := createMockTrainingService(ctrl)
+				tt.Prepare(service)
 
-	// 			trainingService := createTrainingService(service)
+				trainingService := createTrainingService(service)
 
-	// 			err := trainingService.Delete(tt.InputData)
+				err := trainingService.Delete(tt.InputData)
 
-	// 			tt.CheckOutput(t, err)
-	// 		})
-	// 	}
-	// })
-	// t.Run("GetTrainingByID", func(t *testing.T) {
-	// 	for _, tt := range testGetTrainingByID {
-	// 		tt := tt
-	// 		t.Run(tt.TestName, func(t *testing.T) {
-	// 			ctrl := gomock.NewController(t)
-	// 			defer ctrl.Finish()
+				tt.CheckOutput(t, err)
+			})
+		}
+	})
+	t.Run("GetTrainingByID", func(t *testing.T) {
+		for _, tt := range testGetTrainingByID {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	// 			service := createMockTrainingService(ctrl)
-	// 			tt.Prepare(service)
+				service := createMockTrainingService(ctrl)
+				tt.Prepare(service)
 
-	// 			trainingService := createTrainingService(service)
-	// 			training, err := trainingService.GetByID(tt.InputData)
+				trainingService := createTrainingService(service)
+				training, err := trainingService.GetByID(tt.InputData)
 
-	// 			tt.CheckOutput(t, training, err)
-	// 		})
-	// 	}
-	// })
+				tt.CheckOutput(t, training, err)
+			})
+		}
+	})
 
-	// t.Run("GetAllByClient", func(t *testing.T) {
-	// 	for _, tt := range testGetAllByClient {
-	// 		tt := tt
-	// 		t.Run(tt.TestName, func(t *testing.T) {
-	// 			ctrl := gomock.NewController(t)
-	// 			defer ctrl.Finish()
+	t.Run("GetAllByClient", func(t *testing.T) {
+		for _, tt := range testGetAllByClient {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	// 			service := createMockTrainingService(ctrl)
-	// 			tt.Prepare(service)
+				service := createMockTrainingService(ctrl)
+				tt.Prepare(service)
 
-	// 			trainingService := createTrainingService(service)
-	// 			trainings, err := trainingService.GetAllByClient(tt.InputData)
+				trainingService := createTrainingService(service)
+				trainings, err := trainingService.GetAllByClient(tt.InputData)
 
-	// 			tt.CheckOutput(t, trainings, err)
-	// 		})
-	// 	}
-	// })
+				tt.CheckOutput(t, trainings, err)
+			})
+		}
+	})
 
-	// t.Run("GetAllByCoachOnDate", func(t *testing.T) {
-	// 	for _, tt := range testGetAllByCoachOnDate {
-	// 		tt := tt
-	// 		t.Run(tt.TestName, func(t *testing.T) {
-	// 			ctrl := gomock.NewController(t)
-	// 			defer ctrl.Finish()
+	t.Run("GetAllByCoachOnDate", func(t *testing.T) {
+		for _, tt := range testGetAllByCoachOnDate {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	// 			service := createMockTrainingService(ctrl)
-	// 			tt.Prepare(service)
+				service := createMockTrainingService(ctrl)
+				tt.Prepare(service)
 
-	// 			trainingService := createTrainingService(service)
-	// 			trainings, err := trainingService.GetAllByCoachOnDate(tt.CoachID, tt.Date)
+				trainingService := createTrainingService(service)
+				trainings, err := trainingService.GetAllByCoachOnDate(tt.CoachID, tt.Date)
 
-	// 			tt.CheckOutput(t, trainings, err)
-	// 		})
-	// 	}
-	// })
+				tt.CheckOutput(t, trainings, err)
+			})
+		}
+	})
 
-	// t.Run("GetAllByDateTime", func(t *testing.T) {
-	// 	for _, tt := range testGetAllByDateTime {
-	// 		tt := tt
-	// 		t.Run(tt.TestName, func(t *testing.T) {
-	// 			ctrl := gomock.NewController(t)
-	// 			defer ctrl.Finish()
+	t.Run("GetAllByDateTime", func(t *testing.T) {
+		for _, tt := range testGetAllByDateTime {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	// 			service := createMockTrainingService(ctrl)
-	// 			tt.Prepare(service)
+				service := createMockTrainingService(ctrl)
+				tt.Prepare(service)
 
-	// 			trainingService := createTrainingService(service)
-	// 			trainings, err := trainingService.GetAllByDateTime(tt.DateTime)
+				trainingService := createTrainingService(service)
+				trainings, err := trainingService.GetAllByDateTime(tt.DateTime)
 
-	// 			tt.CheckOutput(t, trainings, err)
-	// 		})
-	// 	}
-	// })
+				tt.CheckOutput(t, trainings, err)
+			})
+		}
+	})
 
-	// t.Run("GetAllBetweenDateTime", func(t *testing.T) {
-	// 	for _, tt := range testGetAllBetweenDateTime {
-	// 		tt := tt
-	// 		t.Run(tt.TestName, func(t *testing.T) {
-	// 			ctrl := gomock.NewController(t)
-	// 			defer ctrl.Finish()
+	t.Run("GetAllBetweenDateTime", func(t *testing.T) {
+		for _, tt := range testGetAllBetweenDateTime {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	// 			service := createMockTrainingService(ctrl)
-	// 			tt.Prepare(service)
+				service := createMockTrainingService(ctrl)
+				tt.Prepare(service)
 
-	// 			trainingService := createTrainingService(service)
-	// 			trainings, err := trainingService.GetAllBetweenDateTime(tt.StartDateTime, tt.EndDateTime)
+				trainingService := createTrainingService(service)
+				trainings, err := trainingService.GetAllBetweenDateTime(tt.StartDateTime, tt.EndDateTime)
 
-	// 			tt.CheckOutput(t, trainings, err)
-	// 		})
-	// 	}
-	// })
+				tt.CheckOutput(t, trainings, err)
+			})
+		}
+	})
 }
