@@ -49,6 +49,21 @@ func (mr *MockCoachRepositoryMockRecorder) Create(ctx, coach interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCoachRepository)(nil).Create), ctx, coach)
 }
 
+// GetAll mocks base method.
+func (m *MockCoachRepository) GetAll(ctx context.Context) ([]models.Coach, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetAll", ctx)
+	ret0, _ := ret[0].([]models.Coach)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetAll indicates an expected call of GetAll.
+func (mr *MockCoachRepositoryMockRecorder) GetAll(ctx interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAll", reflect.TypeOf((*MockCoachRepository)(nil).GetAll), ctx)
+}
+
 // GetByID mocks base method.
 func (m *MockCoachRepository) GetByID(ctx context.Context, id uint64) (*models.Coach, error) {
 	m.ctrl.T.Helper()
