@@ -4,15 +4,14 @@ import (
 	"context"
 	"os"
 	"testing"
-	"time"
+	"errors"
 
+	repositories_mocks "github.com/nkarakotova/lim-core/repositories/mocks"
+	managers_mocks "github.com/nkarakotova/lim-core/managers/mocks"
+	data_builders "github.com/nkarakotova/lim-core/services/implementation/data_builders"
 	"github.com/nkarakotova/lim-core/errors/repositoriesErrors"
 	"github.com/nkarakotova/lim-core/errors/servicesErrors"
 	"github.com/nkarakotova/lim-core/services"
-
-	managers_mocks "github.com/nkarakotova/lim-core/managers/mocks"
-	repositories_mocks "github.com/nkarakotova/lim-core/repositories/mocks"
-
 	"github.com/nkarakotova/lim-core/models"
 
 	"github.com/charmbracelet/log"
@@ -23,8 +22,6 @@ import (
 type mockClientService struct {
 	mockClientRepository       *repositories_mocks.MockClientRepository
 	mockTrainingRepository     *repositories_mocks.MockTrainingRepository
-	mockDirectionRepository    *repositories_mocks.MockDirectionRepository
-	mockSubscriptionRepository *repositories_mocks.MockSubscriptionRepository
 	mockTransactionManager     *managers_mocks.MockTransactionManager
 	logger                     *log.Logger
 }
@@ -34,8 +31,6 @@ func createMockClientService(controller *gomock.Controller) *mockClientService {
 
 	service.mockClientRepository = repositories_mocks.NewMockClientRepository(controller)
 	service.mockTrainingRepository = repositories_mocks.NewMockTrainingRepository(controller)
-	service.mockDirectionRepository = repositories_mocks.NewMockDirectionRepository(controller)
-	service.mockSubscriptionRepository = repositories_mocks.NewMockSubscriptionRepository(controller)
 	service.mockTransactionManager = managers_mocks.NewMockTransactionManager(controller)
 	service.logger = log.New(os.Stderr)
 
@@ -43,558 +38,199 @@ func createMockClientService(controller *gomock.Controller) *mockClientService {
 }
 
 func createClientService(service *mockClientService) services.ClientService {
-	return NewClientServiceImplementation(service.mockClientRepository, service.mockTrainingRepository, service.mockDirectionRepository, service.mockSubscriptionRepository, service.mockTransactionManager, service.logger)
+	return NewClientServiceImplementation(service.mockClientRepository, service.mockTrainingRepository, service.mockTransactionManager, service.logger)
 }
 
-//-------------------------------------------------------------------------------------------------
-// create
-
-var testCreateSuccess = []struct {
+var testGetByTelephone = []struct {
 	TestName  string
-	InputData struct {
-		client *models.Client
-	}
-	Prepare     func(service *mockClientService)
+	InputData string
+	Prepare   func(service *mockClientService)
+	CheckOutput func(t *testing.T, client *models.Client, err error)
+}{
+	{
+		TestName:  "success get client by telephone",
+		InputData: "1234567890",
+		Prepare: func(service *mockClientService) {
+			ctx := context.Background()
+			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
+			Return(data_builders.NewClientBuilder().Build(), nil)
+		},
+		CheckOutput: func(t *testing.T, client *models.Client, err error) {
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
+			assert.Equal(t, "1234567890", client.Telephone)
+		},
+	},
+	{
+		TestName:  "error getting client by telephone",
+		InputData: "nonexistent",
+		Prepare: func(service *mockClientService) {
+			ctx := context.Background()
+			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "nonexistent").
+			Return(nil, errors.New("client not found"))
+		},
+		CheckOutput: func(t *testing.T, client *models.Client, err error) {
+			assert.Error(t, err)
+			assert.Nil(t, client)
+		},
+	},
+}
+
+var testCreateClient = []struct {
+	TestName  string
+	InputData *models.Client
+	Prepare   func(service *mockClientService)
 	CheckOutput func(t *testing.T, err error)
 }{
 	{
-		TestName: "simple create",
-		InputData: struct {
-			client *models.Client
-		}{&models.Client{SubscriptionID: 7,
-			Name:      "Natali",
-			Telephone: "9262218276",
-			Mail:      "nka@mail.ru",
-			Password:  "111",
-			Age:       20,
-			Gender:    models.Female}},
-
+		TestName:  "success create client",
+		InputData: data_builders.NewClientBuilder().Build(),
 		Prepare: func(service *mockClientService) {
 			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "9262218276").Return(nil, repositoriesErrors.EntityDoesNotExists)
-
-			service.mockClientRepository.EXPECT().Create(ctx,
-				&models.Client{SubscriptionID: 7,
-					Name:      "Natali",
-					Telephone: "9262218276",
-					Mail:      "nka@mail.ru",
-					Password:  "111",
-					Age:       20,
-					Gender:    models.Female}).Return(nil)
+			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").Return(nil, repositoriesErrors.EntityDoesNotExists)
+			service.mockClientRepository.EXPECT().Create(ctx, data_builders.NewClientBuilder().Build()).Return(nil)
 		},
 		CheckOutput: func(t *testing.T, err error) {
 			assert.NoError(t, err)
 		},
 	},
+	{
+		TestName:  "error creating client",
+		InputData: data_builders.NewClientBuilder().WithTelephone("invalid").Build(),
+		Prepare: func(service *mockClientService) {
+			ctx := context.Background()
+			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "invalid").Return(nil, errors.New("validation error"))
+		},
+		CheckOutput: func(t *testing.T, err error) {
+			assert.Error(t, err)
+		},
+	},
 }
 
-var testCreateFailure = []struct {
-	TestName  string
-	InputData struct {
-		client *models.Client
-	}
-	Prepare     func(service *mockClientService)
-	CheckOutput func(t *testing.T, err error)
+var testLogin = []struct {
+	TestName   string
+	Tel        string
+	Password   string
+	Prepare    func(service *mockClientService)
+	CheckOutput func(t *testing.T, client *models.Client, err error)
 }{
 	{
-		TestName: "create error, telephone number already exists",
-		InputData: struct {
-			client *models.Client
-		}{&models.Client{SubscriptionID: 7,
-			Name:      "Natali",
-			Telephone: "9262218276",
-			Mail:      "nka@mail.ru",
-			Password:  "111",
-			Age:       20,
-			Gender:    models.Female}},
-
+		TestName:   "success login",
+		Tel:        "1234567890",
+		Password:   "123",
 		Prepare: func(service *mockClientService) {
 			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "9262218276").Return(
-				&models.Client{SubscriptionID: 7,
-					Name:      "Natali",
-					Telephone: "9262218276",
-					Mail:      "nka@mail.ru",
-					Password:  "111",
-					Age:       20,
-					Gender:    models.Female}, nil)
+			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
+				Return(data_builders.NewClientBuilder().Build(), nil)
 		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.ClientAlreadyExists)
+		CheckOutput: func(t *testing.T, client *models.Client, err error) {
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
 		},
 	},
 	{
-		TestName: "create error, incorrect telephone number length",
-		InputData: struct {
-			client *models.Client
-		}{&models.Client{SubscriptionID: 7,
-			Name:      "Natali",
-			Telephone: "92622182767",
-			Mail:      "nka@mail.ru",
-			Password:  "111",
-			Age:       20,
-			Gender:    models.Female}},
-
+		TestName:   "login with incorrect password",
+		Tel:        "1234567890",
+		Password:   "111",
 		Prepare: func(service *mockClientService) {
 			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "92622182767").Return(nil, repositoriesErrors.EntityDoesNotExists)
+			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
+				Return(data_builders.NewClientBuilder().Build(), nil)
 		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.ClientTelephoneIncorrect)
-		},
-	},
-	{
-		TestName: "create error, letter in telephone number",
-		InputData: struct {
-			client *models.Client
-		}{&models.Client{SubscriptionID: 7,
-			Name:      "Natali",
-			Telephone: "926221827g",
-			Mail:      "nka@mail.ru",
-			Password:  "111",
-			Age:       20,
-			Gender:    models.Female}},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "926221827g").Return(nil, repositoriesErrors.EntityDoesNotExists)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.ClientTelephoneIncorrect)
-		},
-	},
-	{
-		TestName: "create error, incorrect mail",
-		InputData: struct {
-			client *models.Client
-		}{&models.Client{SubscriptionID: 7,
-			Name:      "Natali",
-			Telephone: "9262218276",
-			Mail:      "nkamail.ru",
-			Password:  "111",
-			Age:       20,
-			Gender:    models.Female}},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "9262218276").Return(nil, repositoriesErrors.EntityDoesNotExists)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.ClientMailIncorrect)
+		CheckOutput: func(t *testing.T, client *models.Client, err error) {
+			assert.Error(t, err)
+			assert.Nil(t, client)
 		},
 	},
 }
 
-func TestClientServiceImplementationCreate(t *testing.T) {
-	for _, tt := range testCreateSuccess {
-		tt := tt
-		t.Run(tt.TestName, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			service := createMockClientService(ctrl)
-			tt.Prepare(service)
-
-			clientService := createClientService(service)
-
-			err := clientService.Create(tt.InputData.client)
-
-			tt.CheckOutput(t, err)
-		})
-	}
-
-	for _, tt := range testCreateFailure {
-		tt := tt
-		t.Run(tt.TestName, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
-
-			service := createMockClientService(ctrl)
-			tt.Prepare(service)
-
-			clientService := createClientService(service)
-
-			err := clientService.Create(tt.InputData.client)
-
-			tt.CheckOutput(t, err)
-		})
-	}
-}
-
-//-------------------------------------------------------------------------------------------------
-// create assignment
-
-var testCreateAssignmentSuccess = []struct {
+var testGetClientByID = []struct {
 	TestName  string
-	InputData struct {
-		clientID   uint64
-		trainingID uint64
-	}
-	Prepare     func(service *mockClientService)
-	CheckOutput func(t *testing.T, err error)
+	ID        uint64
+	Prepare   func(service *mockClientService)
+	CheckOutput func(t *testing.T, client *models.Client, err error)
 }{
 	{
-		TestName: "simple create",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
+		TestName:  "success get client by ID",
+		ID:        1,
+		Prepare: func(service *mockClientService) {
+			ctx := context.Background()
+			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).
+				Return(data_builders.NewClientBuilder().Build(), nil)
+		},
+		CheckOutput: func(t *testing.T, client *models.Client, err error) {
+			assert.NoError(t, err)
+			assert.NotNil(t, client)
+			assert.Equal(t, uint64(1), client.ID)
+		},
+	},
+	{
+		TestName:  "error getting client by ID",
+		ID:        999,
+		Prepare: func(service *mockClientService) {
+			ctx := context.Background()
+			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(999)).
+				Return(nil, errors.New("not found"))
+		},
+		CheckOutput: func(t *testing.T, client *models.Client, err error) {
+			assert.Error(t, err)
+			assert.Nil(t, client)
+		},
+	},
+}
+
+var testCreateAssignment = []struct {
+	TestName        string
+	ClientID        uint64
+	TrainingID      uint64
+	DirectionID     uint64
+	SubscriptionID  uint64
+	Prepare      func(service *mockClientService)
+	CheckOutput  func(t *testing.T, err error)
+}{
+	{
+		TestName:    "success create assignment",
+		ClientID:    1,
+		TrainingID:  1,
+		DirectionID: 1,
+		SubscriptionID: 1,
 
 		Prepare: func(service *mockClientService) {
 			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 5,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
+			client := data_builders.NewClientBuilder().Build()
+			training := data_builders.NewTrainingBuilder().Build()
 
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 30,
-				}, nil)
-
-			service.mockSubscriptionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Subscription{
-					ID:                    5,
-					RemainingTrainingsNum: 10,
-					StartDate:             time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					EndDate:               time.Date(2024, 11, 1, 0, 0, 0, 0, time.UTC),
-				}, nil)
-
-			service.mockDirectionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Direction{
-					ID:               22,
-					AcceptableGender: models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetAllByClient(ctx, uint64(3)).Return(
-				[]models.Training{
-					{
-						ID:                 17,
-						DirectionID:        22,
-						DateTime:           time.Date(2024, 3, 5, 14, 0, 0, 0, time.UTC),
-						HallID:             111,
-						AvailablePlacesNum: 30,
-					},
-					{
-						ID:                 10,
-						DirectionID:        22,
-						DateTime:           time.Date(2024, 3, 5, 17, 0, 0, 0, time.UTC),
-						HallID:             111,
-						AvailablePlacesNum: 30,
-					},
-				}, nil)
-
+			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).Return(client, nil)
+			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(1)).Return(training, nil)
+			service.mockTrainingRepository.EXPECT().GetAllByClient(ctx, client.ID).Return(nil, nil)
 			service.mockTransactionManager.EXPECT().WithinTransaction(ctx, gomock.Any()).Return(nil)
-
 		},
 		CheckOutput: func(t *testing.T, err error) {
 			assert.NoError(t, err)
 		},
 	},
-}
-
-var testCreateAssignmentFailure = []struct {
-	TestName  string
-	InputData struct {
-		clientID   uint64
-		trainingID uint64
-	}
-	Prepare     func(service *mockClientService)
-	CheckOutput func(t *testing.T, err error)
-}{
 	{
-		TestName: "create error, no avaliable places number",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
-
+		TestName:    "error create assignment due to no available places",
+		ClientID:    1,
+		TrainingID:  1,
 		Prepare: func(service *mockClientService) {
 			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 5,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
+			client := data_builders.NewClientBuilder().Build()
+			training := data_builders.NewTrainingBuilder().WithPlacesNum(0).Build()
 
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 0,
-				}, nil)
+			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).Return(client, nil)
+			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(1)).Return(training, nil)
+
 		},
 		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.NoAvailablePlacesNum)
-		},
-	},
-	{
-		TestName: "create error, no subscription",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 0,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 30,
-				}, nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.ClientHasntGotSubscription)
-		},
-	},
-	{
-		TestName: "create error, no remaining trainings",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 5,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 30,
-				}, nil)
-
-			service.mockSubscriptionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Subscription{
-					ID:                    5,
-					RemainingTrainingsNum: 0,
-					StartDate:             time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					EndDate:               time.Date(2024, 11, 1, 0, 0, 0, 0, time.UTC),
-				}, nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.ClientSubscriptionIsOver)
-		},
-	},
-	{
-		TestName: "create error, subscription is over",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 5,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 30,
-				}, nil)
-
-			service.mockSubscriptionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Subscription{
-					ID:                    5,
-					RemainingTrainingsNum: 10,
-					StartDate:             time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					EndDate:               time.Date(2024, 3, 3, 0, 0, 0, 0, time.UTC),
-				}, nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.ClientSubscriptionIsOver)
-		},
-	},
-	{
-		TestName: "create error, not available age",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 5,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 30,
-					AcceptableAge:      30,
-				}, nil)
-
-			service.mockSubscriptionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Subscription{
-					ID:                    5,
-					RemainingTrainingsNum: 10,
-					StartDate:             time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					EndDate:               time.Date(2024, 11, 1, 0, 0, 0, 0, time.UTC),
-				}, nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.AgeNotCorrespondToAcceptableAge)
-		},
-	},
-	{
-		TestName: "create error, not available gender",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 5,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 30,
-				}, nil)
-
-			service.mockSubscriptionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Subscription{
-					ID:                    5,
-					RemainingTrainingsNum: 10,
-					StartDate:             time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					EndDate:               time.Date(2024, 11, 1, 0, 0, 0, 0, time.UTC),
-				}, nil)
-
-			service.mockDirectionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Direction{
-					ID:               22,
-					AcceptableGender: models.Male,
-				}, nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.GenderNotCorrespondToAcceptableGender)
-		},
-	},
-	{
-		TestName: "create error, has assigenment on this time",
-		InputData: struct {
-			clientID   uint64
-			trainingID uint64
-		}{clientID: 3, trainingID: 7},
-
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(3)).Return(
-				&models.Client{
-					ID:             3,
-					SubscriptionID: 5,
-					Age:            20,
-					Gender:         models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(7)).Return(
-				&models.Training{
-					ID:                 7,
-					DirectionID:        5,
-					DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-					HallID:             111,
-					AvailablePlacesNum: 30,
-				}, nil)
-
-			service.mockSubscriptionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Subscription{
-					ID:                    5,
-					RemainingTrainingsNum: 10,
-					StartDate:             time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
-					EndDate:               time.Date(2024, 11, 1, 0, 0, 0, 0, time.UTC),
-				}, nil)
-
-			service.mockDirectionRepository.EXPECT().GetByID(ctx, uint64(5)).Return(
-				&models.Direction{
-					ID:               22,
-					AcceptableGender: models.Female,
-				}, nil)
-
-			service.mockTrainingRepository.EXPECT().GetAllByClient(ctx, uint64(3)).Return(
-				[]models.Training{
-					{
-						ID:                 17,
-						DirectionID:        22,
-						DateTime:           time.Date(2024, 3, 5, 12, 0, 0, 0, time.UTC),
-						HallID:             111,
-						AvailablePlacesNum: 30,
-					},
-					{
-						ID:                 10,
-						DirectionID:        22,
-						DateTime:           time.Date(2024, 3, 5, 17, 0, 0, 0, time.UTC),
-						HallID:             111,
-						AvailablePlacesNum: 30,
-					},
-				}, nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.ErrorIs(t, err, servicesErrors.AssignmentOnThisTimeAlreadyExists)
+			assert.Error(t, err)
+			assert.Equal(t, servicesErrors.NoAvailablePlacesNum, err)
 		},
 	},
 }
 
-func TestClientServiceImplementationCreateAssignment(t *testing.T) {
-	for _, tt := range testCreateAssignmentSuccess {
-		tt := tt
+func TestClientServiceImplementation(t *testing.T) {
+	for _, tt := range testGetByTelephone {
 		t.Run(tt.TestName, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
@@ -604,28 +240,97 @@ func TestClientServiceImplementationCreateAssignment(t *testing.T) {
 
 			clientService := createClientService(service)
 
-			err := clientService.СreateAssignment(tt.InputData.clientID, tt.InputData.trainingID)
-
-			tt.CheckOutput(t, err)
+			client, err := clientService.GetByTelephone(tt.InputData)
+			tt.CheckOutput(t, client, err)
 		})
 	}
+	t.Run("GetByTelephone", func(t *testing.T) {
+		for _, tt := range testGetByTelephone {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-	for _, tt := range testCreateAssignmentFailure {
-		tt := tt
-		t.Run(tt.TestName, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+				service := createMockClientService(ctrl)
+				tt.Prepare(service)
 
-			service := createMockClientService(ctrl)
-			tt.Prepare(service)
+				clientService := createClientService(service)
+				client, err := clientService.GetByTelephone(tt.InputData)
 
-			clientService := createClientService(service)
+				tt.CheckOutput(t, client, err)
+			})
+		}
+	})
 
-			err := clientService.СreateAssignment(tt.InputData.clientID, tt.InputData.trainingID)
+	t.Run("Create", func(t *testing.T) {
+		for _, tt := range testCreateClient {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
 
-			tt.CheckOutput(t, err)
-		})
-	}
+				service := createMockClientService(ctrl)
+				tt.Prepare(service)
+
+				clientService := createClientService(service)
+				err := clientService.Create(tt.InputData)
+
+				tt.CheckOutput(t, err)
+			})
+		}
+	})
+
+	t.Run("Login", func(t *testing.T) {
+		for _, tt := range testLogin {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				service := createMockClientService(ctrl)
+				tt.Prepare(service)
+
+				clientService := createClientService(service)
+				client, err := clientService.Login(tt.Tel, tt.Password)
+
+				tt.CheckOutput(t, client, err)
+			})
+		}
+	})
+
+	t.Run("GetByID", func(t *testing.T) {
+		for _, tt := range testGetClientByID {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				service := createMockClientService(ctrl)
+				tt.Prepare(service)
+
+				clientService := createClientService(service)
+				client, err := clientService.GetByID(tt.ID)
+
+				tt.CheckOutput(t, client, err)
+			})
+		}
+	})
+
+	t.Run("CreateAssignment", func(t *testing.T) {
+		for _, tt := range testCreateAssignment {
+			tt := tt
+			t.Run(tt.TestName, func(t *testing.T) {
+				ctrl := gomock.NewController(t)
+				defer ctrl.Finish()
+
+				service := createMockClientService(ctrl)
+				tt.Prepare(service)
+
+				clientService := createClientService(service)
+				err := clientService.СreateAssignment(tt.ClientID, tt.TrainingID)
+
+				tt.CheckOutput(t, err)
+			})
+		}
+	})
 }
-
-//-------------------------------------------------------------------------------------------------

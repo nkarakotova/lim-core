@@ -19,8 +19,6 @@ import (
 type ClientServiceImplementation struct {
 	ClientRepository       repositories.ClientRepository
 	TrainingRepository     repositories.TrainingRepository
-	DirectionRepository    repositories.DirectionRepository
-	SubscriptionRepository repositories.SubscriptionRepository
 	TransactionManager     managers.TransactionManager
 	logger                 *log.Logger
 }
@@ -28,8 +26,6 @@ type ClientServiceImplementation struct {
 func NewClientServiceImplementation(
 	ClientRepository repositories.ClientRepository,
 	TrainingRepository repositories.TrainingRepository,
-	DirectionRepository repositories.DirectionRepository,
-	SubscriptionRepository repositories.SubscriptionRepository,
 	TransactionManager managers.TransactionManager,
 	logger *log.Logger,
 ) services.ClientService {
@@ -37,8 +33,6 @@ func NewClientServiceImplementation(
 	return &ClientServiceImplementation{
 		ClientRepository:       ClientRepository,
 		TrainingRepository:     TrainingRepository,
-		DirectionRepository:    DirectionRepository,
-		SubscriptionRepository: SubscriptionRepository,
 		TransactionManager:     TransactionManager,
 		logger:                 logger,
 	}
@@ -160,69 +154,13 @@ func (c *ClientServiceImplementation) trainingInSameDateTimeCheck(ctx context.Co
 	return nil
 }
 
-func (c *ClientServiceImplementation) subscriptionCheck(ctx context.Context, client *models.Client, training *models.Training) error {
-	if client.SubscriptionID == 0 {
-		c.logger.Warn("CLIENT! Client hasn't got subscription", "id", client.ID)
-		return servicesErrors.ClientHasntGotSubscription
-	}
-
-	subscription, err := c.SubscriptionRepository.GetByID(ctx, client.SubscriptionID)
-	if err != nil {
-		c.logger.Warn("SUBSCRIPTION! Error in repository method GetByID", "id", client.SubscriptionID, "error", err)
-		return err
-	}
-
-	if subscription.RemainingTrainingsNum == 0 {
-		c.logger.Warn("SUBSCRIPTION! Subscription is over", "id", client.ID, "error", err)
-		return servicesErrors.ClientSubscriptionIsOver
-	}
-
-	curStart := training.DateTime
-	if subscription.StartDate.After(curStart) || subscription.EndDate.Before(curStart) {
-		c.logger.Warn("CLIENT! Subscription is over", "id", client.ID, "error", err)
-		return servicesErrors.ClientSubscriptionIsOver
-	}
-
-	return nil
-}
-
-func (c *ClientServiceImplementation) genderCheck(ctx context.Context, client *models.Client, training *models.Training) error {
-	direction, err := c.DirectionRepository.GetByID(ctx, training.DirectionID)
-	if err != nil {
-		c.logger.Warn("DIRECTION! Error in repository GetByID", "DirectionID", training.DirectionID, "error", err)
-		return err
-	}
-
-	if (direction.AcceptableGender != models.Unknown) && (client.Gender != direction.AcceptableGender) {
-		c.logger.Warn("CLIENT! Gender does not correspond to the acceptable gender", "id", client.ID, "error", err)
-		return servicesErrors.GenderNotCorrespondToAcceptableGender
-	}
-
-	return nil
-}
-
 func (c *ClientServiceImplementation) createAssignmentChecks(ctx context.Context, client *models.Client, training *models.Training) error {
-	if training.AvailablePlacesNum == 0 {
+	if training.PlacesNum == 0 {
 		c.logger.Warn("TRAINING! There is no available places num", "id", training.ID)
 		return servicesErrors.NoAvailablePlacesNum
 	}
 
-	err := c.subscriptionCheck(ctx, client, training)
-	if err != nil {
-		return err
-	}
-
-	if client.Age < training.AcceptableAge {
-		c.logger.Warn("CLIENT! Age does not correspond to the acceptable age", "id", client.ID, "error", err)
-		return servicesErrors.AgeNotCorrespondToAcceptableAge
-	}
-
-	err = c.genderCheck(ctx, client, training)
-	if err != nil {
-		return err
-	}
-
-	err = c.trainingInSameDateTimeCheck(ctx, client, training)
+	err := c.trainingInSameDateTimeCheck(ctx, client, training)
 	if err != nil {
 		return err
 	}
@@ -235,12 +173,6 @@ func (c *ClientServiceImplementation) createAssignment(ctx context.Context, clie
 		err := c.ClientRepository.СreateAssignment(ctx, client.ID, training.ID)
 		if err != nil {
 			c.logger.Warn("CLIENT! Error in repository СreateAssignment", "clientID", client.ID, "trainingID", training.ID, "error", err)
-			return err
-		}
-
-		err = c.SubscriptionRepository.ReduceRemainingTrainingsNum(ctx, client.SubscriptionID)
-		if err != nil {
-			c.logger.Warn("SUBSCRIPTION! Error in repository ReduceRemainingTrainingsNum", "SubscriptionID", client.SubscriptionID, "error", err)
 			return err
 		}
 
@@ -286,22 +218,10 @@ func (c *ClientServiceImplementation) СreateAssignment(clientID, trainingID uin
 func (c *ClientServiceImplementation) DeleteAssignment(clientID, trainingID uint64) error {
 	ctx := context.Background()
 
-	client, err := c.ClientRepository.GetByID(ctx, clientID)
-	if err != nil {
-		c.logger.Warn("CLIENT! Error in repository method GetByID", "id", clientID, "error", err)
-		return err
-	}
-
 	return c.TransactionManager.WithinTransaction(ctx, func(txCtx context.Context) error {
-		err = c.ClientRepository.DeleteAssignment(ctx, clientID, trainingID)
+		err := c.ClientRepository.DeleteAssignment(ctx, clientID, trainingID)
 		if err != nil {
 			c.logger.Warn("CLIENT! Error in repository DeleteAssignment", "clientID", clientID, "trainingID", clientID, "error", err)
-			return err
-		}
-
-		err = c.SubscriptionRepository.IncreaseRemainingTrainingsNum(ctx, client.SubscriptionID)
-		if err != nil {
-			c.logger.Warn("SUBSCRIPTION! Error in repository IncreaseRemainingTrainingsNum", "SubscriptionID", client.SubscriptionID, "error", err)
 			return err
 		}
 

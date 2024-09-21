@@ -18,7 +18,6 @@ type TrainingServiceImplementation struct {
 	TrainingRepository     repositories.TrainingRepository
 	ClientRepository       repositories.ClientRepository
 	CoachRepository        repositories.CoachRepository
-	SubscriptionRepository repositories.SubscriptionRepository
 	HallRepository         repositories.HallRepository
 	TransactionManager     managers.TransactionManager
 	logger                 *log.Logger
@@ -28,7 +27,6 @@ func NewTrainingServiceImplementation(
 	TrainingRepository repositories.TrainingRepository,
 	ClientRepository repositories.ClientRepository,
 	CoachRepository repositories.CoachRepository,
-	SubscriptionRepository repositories.SubscriptionRepository,
 	HallRepository repositories.HallRepository,
 	TransactionManager managers.TransactionManager,
 	logger *log.Logger,
@@ -38,45 +36,17 @@ func NewTrainingServiceImplementation(
 		TrainingRepository:     TrainingRepository,
 		ClientRepository:       ClientRepository,
 		CoachRepository:        CoachRepository,
-		SubscriptionRepository: SubscriptionRepository,
 		HallRepository:         HallRepository,
 		TransactionManager:     TransactionManager,
 		logger:                 logger,
 	}
 }
 
-func (t *TrainingServiceImplementation) validate(ctx context.Context, training *models.Training) error {
+func (t *TrainingServiceImplementation) validate(training *models.Training) error {
 	h, m, s := training.DateTime.Clock()
 	if h < services.FirstTrainingTime || h > services.LastTrainingTime || m != 0 || s != 0 {
 		t.logger.Warn("TRAINING! Incorrect start time", "id", training.ID)
 		return servicesErrors.IncorrectTrainingTime
-	}
-
-	hall, err := t.HallRepository.GetByID(ctx, training.HallID)
-	if err != nil {
-		t.logger.Warn("HALL! Error in repository GetByID", "id", training.HallID, "error", err)
-		return err
-	}
-	if training.PlacesNum > hall.Capacity {
-		t.logger.Warn("HALL! Places num more then capacity", "id", training.HallID, "error", err)
-		return servicesErrors.PlacesNumMoreThenCapacity
-	}
-
-	coaches, err := t.CoachRepository.GetAllByDirection(ctx, training.DirectionID)
-	if err != nil {
-		t.logger.Warn("TRAINING! Error in repository GetAllByDirection", "id", training.ID, "error", err)
-		return err
-	}
-
-	var flag = false
-	for _, c := range coaches {
-		if c.ID == training.CoachID {
-			flag = true
-		}
-	}
-	if !flag {
-		t.logger.Warn("TRAINING! Not coach by direction", "id", training.ID, "error", err)
-		return servicesErrors.NotCoachByDirection
 	}
 
 	trainings, err := t.GetAllByDateTime(training.DateTime)
@@ -97,7 +67,7 @@ func (t *TrainingServiceImplementation) validate(ctx context.Context, training *
 func (t *TrainingServiceImplementation) Create(training *models.Training) error {
 	ctx := context.Background()
 
-	err := t.validate(ctx, training)
+	err := t.validate(training)
 	if err != nil {
 		return err
 	}
@@ -112,37 +82,12 @@ func (t *TrainingServiceImplementation) Create(training *models.Training) error 
 	return nil
 }
 
-func (t *TrainingServiceImplementation) delete(ctx context.Context, clients []models.Client, id uint64) error {
-	return t.TransactionManager.WithinTransaction(ctx, func(txCtx context.Context) error {
-		for _, c := range clients {
-			err := t.SubscriptionRepository.IncreaseRemainingTrainingsNum(ctx, c.SubscriptionID)
-			if err != nil {
-				t.logger.Warn("SUBSCRIPTION! Error in repository IncreaseRemainingTrainingsNum")
-				return err
-			}
-		}
-
-		err := t.TrainingRepository.Delete(ctx, id)
-		if err != nil {
-			t.logger.Warn("TRAINING! Error in repository Delete", "id", id, "error", err)
-			return err
-		}
-
-		return nil
-	})
-}
-
 func (t *TrainingServiceImplementation) Delete(id uint64) error {
 	ctx := context.Background()
 
-	clients, err := t.ClientRepository.GetByTraining(ctx, id)
+	err := t.TrainingRepository.Delete(ctx, id)
 	if err != nil {
-		t.logger.Warn("CLIENT! Error in repository GetByTraining")
-		return err
-	}
-
-	err = t.delete(ctx, clients, id)
-	if err != nil {
+		t.logger.Warn("TRAINING! Error in repository Delete", "id", id, "error", err)
 		return err
 	}
 
@@ -221,17 +166,4 @@ func (t *TrainingServiceImplementation) GetAllBetweenDateTime(start time.Time, e
 
 	t.logger.Debug("TRAINING! Success GetAllBetweenDateTime", "start", start, "end", end)
 	return trainings, nil
-}
-
-func (t *TrainingServiceImplementation) ReduceAvailablePlacesNum(id uint64) error {
-	ctx := context.Background()
-
-	err := t.TrainingRepository.ReduceAvailablePlacesNum(ctx, id)
-	if err != nil {
-		t.logger.Warn("TRAINING! Error in repository method ReduceAvailablePlacesNum", "id", id, "error", err)
-		return err
-	}
-
-	t.logger.Info("TRAINING! Success ReduceAvailablePlacesNum", "id", id)
-	return nil
 }

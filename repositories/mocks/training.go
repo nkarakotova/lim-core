@@ -6,11 +6,11 @@ package mock_repositories
 
 import (
 	context "context"
-	models "github.com/nkarakotova/lim-core/models"
 	reflect "reflect"
 	time "time"
 
 	gomock "github.com/golang/mock/gomock"
+	models "github.com/nkarakotova/lim-core/models"
 )
 
 // MockTrainingRepository is a mock of TrainingRepository interface.

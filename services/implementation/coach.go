@@ -90,32 +90,6 @@ func (c *CoachServiceImplementation) GetByID(id uint64) (*models.Coach, error) {
 	return coach, nil
 }
 
-func (c *CoachServiceImplementation) AddDirection(coachID, directionID uint64) error {
-	ctx := context.Background()
-
-	err := c.CoachRepository.AddDirection(ctx, coachID, directionID)
-	if err != nil {
-		c.logger.Warn("COACH! Error in repository method AddDirection", "id", coachID, "error", err)
-		return err
-	}
-
-	c.logger.Debug("COACH! Success AddDirection", "id", coachID)
-	return nil
-}
-
-func (c *CoachServiceImplementation) GetAllByDirection(id uint64) ([]models.Coach, error) {
-	ctx := context.Background()
-
-	coaches, err := c.CoachRepository.GetAllByDirection(ctx, id)
-	if err != nil {
-		c.logger.Warn("COACH! Error in repository method GetAllByDirection", "id", id, "err", err)
-		return nil, err
-	}
-
-	c.logger.Debug("COACH! Success GetAllByDirection", "id", id)
-	return coaches, nil
-}
-
 func (c *CoachServiceImplementation) getAllSlots(date time.Time) []time.Time {
 	date = time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
 

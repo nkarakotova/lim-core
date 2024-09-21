@@ -6,10 +6,10 @@ package mock_repositories
 
 import (
 	context "context"
-	models "github.com/nkarakotova/lim-core/models"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	models "github.com/nkarakotova/lim-core/models"
 )
 
 // MockClientRepository is a mock of ClientRepository interface.

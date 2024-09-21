@@ -6,10 +6,10 @@ package mock_repositories
 
 import (
 	context "context"
-	models "github.com/nkarakotova/lim-core/models"
 	reflect "reflect"
 
 	gomock "github.com/golang/mock/gomock"
+	models "github.com/nkarakotova/lim-core/models"
 )
 
 // MockCoachRepository is a mock of CoachRepository interface.
@@ -35,20 +35,6 @@ func (m *MockCoachRepository) EXPECT() *MockCoachRepositoryMockRecorder {
 	return m.recorder
 }
 
-// AddDirection mocks base method.
-func (m *MockCoachRepository) AddDirection(ctx context.Context, coachID, directionID uint64) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "AddDirection", ctx, coachID, directionID)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// AddDirection indicates an expected call of AddDirection.
-func (mr *MockCoachRepositoryMockRecorder) AddDirection(ctx, coachID, directionID interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddDirection", reflect.TypeOf((*MockCoachRepository)(nil).AddDirection), ctx, coachID, directionID)
-}
-
 // Create mocks base method.
 func (m *MockCoachRepository) Create(ctx context.Context, coach *models.Coach) error {
 	m.ctrl.T.Helper()
@@ -61,21 +47,6 @@ func (m *MockCoachRepository) Create(ctx context.Context, coach *models.Coach) e
 func (mr *MockCoachRepositoryMockRecorder) Create(ctx, coach interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Create", reflect.TypeOf((*MockCoachRepository)(nil).Create), ctx, coach)
-}
-
-// GetAllByDirection mocks base method.
-func (m *MockCoachRepository) GetAllByDirection(ctx context.Context, id uint64) ([]models.Coach, error) {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetAllByDirection", ctx, id)
-	ret0, _ := ret[0].([]models.Coach)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetAllByDirection indicates an expected call of GetAllByDirection.
-func (mr *MockCoachRepositoryMockRecorder) GetAllByDirection(ctx, id interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAllByDirection", reflect.TypeOf((*MockCoachRepository)(nil).GetAllByDirection), ctx, id)
 }
 
 // GetByID mocks base method.
