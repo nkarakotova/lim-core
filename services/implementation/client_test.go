@@ -10,13 +10,13 @@ import (
 	managers_mocks "github.com/nkarakotova/lim-core/managers/mocks"
 	data_builders "github.com/nkarakotova/lim-core/services/implementation/data_builders"
 	"github.com/nkarakotova/lim-core/errors/repositoriesErrors"
-	"github.com/nkarakotova/lim-core/errors/servicesErrors"
 	"github.com/nkarakotova/lim-core/services"
-	"github.com/nkarakotova/lim-core/models"
 
 	"github.com/charmbracelet/log"
 	"github.com/golang/mock/gomock"
-	"github.com/stretchr/testify/assert"
+
+	"github.com/ozontech/allure-go/pkg/framework/provider"
+	"github.com/ozontech/allure-go/pkg/framework/suite"
 )
 
 type mockClientService struct {
@@ -41,296 +41,274 @@ func createClientService(service *mockClientService) services.ClientService {
 	return NewClientServiceImplementation(service.mockClientRepository, service.mockTrainingRepository, service.mockTransactionManager, service.logger)
 }
 
-var testGetByTelephone = []struct {
-	TestName  string
-	InputData string
-	Prepare   func(service *mockClientService)
-	CheckOutput func(t *testing.T, client *models.Client, err error)
-}{
-	{
-		TestName:  "success get client by telephone",
-		InputData: "1234567890",
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
-			Return(data_builders.NewClientBuilder().Build(), nil)
-		},
-		CheckOutput: func(t *testing.T, client *models.Client, err error) {
-			assert.NoError(t, err)
-			assert.NotNil(t, client)
-			assert.Equal(t, "1234567890", client.Telephone)
-		},
-	},
-	{
-		TestName:  "error getting client by telephone",
-		InputData: "nonexistent",
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "nonexistent").
-			Return(nil, errors.New("client not found"))
-		},
-		CheckOutput: func(t *testing.T, client *models.Client, err error) {
-			assert.Error(t, err)
-			assert.Nil(t, client)
-		},
-	},
+type ClientSuite struct {
+	suite.Suite
 }
 
-var testCreateClient = []struct {
-	TestName  string
-	InputData *models.Client
-	Prepare   func(service *mockClientService)
-	CheckOutput func(t *testing.T, err error)
-}{
-	{
-		TestName:  "success create client",
-		InputData: data_builders.NewClientBuilder().Build(),
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").Return(nil, repositoriesErrors.EntityDoesNotExists)
-			service.mockClientRepository.EXPECT().Create(ctx, data_builders.NewClientBuilder().Build()).Return(nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.NoError(t, err)
-		},
-	},
-	{
-		TestName:  "error creating client",
-		InputData: data_builders.NewClientBuilder().WithTelephone("invalid").Build(),
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "invalid").Return(nil, errors.New("validation error"))
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.Error(t, err)
-		},
-	},
+func (s *ClientSuite) TestGetClientByTelephoneSuccess(t provider.T) {
+	t.Title("GetClientByTelephone: Success")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").Return(data_builders.NewClientBuilder().Build(), nil)
+
+		clientService := createClientService(service)
+		client, err := clientService.GetByTelephone("1234567890")
+
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().NotNil(client)
+		sCtx.Assert().Equal(data_builders.NewClientBuilder().Build(), client)
+	})
 }
 
-var testLogin = []struct {
-	TestName   string
-	Tel        string
-	Password   string
-	Prepare    func(service *mockClientService)
-	CheckOutput func(t *testing.T, client *models.Client, err error)
-}{
-	{
-		TestName:   "success login",
-		Tel:        "1234567890",
-		Password:   "123",
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
+func (s *ClientSuite) TestGetClientByTelephoneFailure(t provider.T) {
+	t.Title("GetClientByTelephone: Failure")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1111111111").Return(nil, errors.New("not found"))
+
+		clientService := createClientService(service)
+		client, err := clientService.GetByTelephone("1111111111")
+
+		sCtx.Assert().Error(err)
+		sCtx.Assert().Nil(client)
+	})
+}
+
+func (s *ClientSuite) TestCreateClientSuccess(t provider.T) {
+	t.Title("CreateClient: Success")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").Return(nil, repositoriesErrors.EntityDoesNotExists)
+		service.mockClientRepository.EXPECT().Create(ctx, data_builders.NewClientBuilder().Build()).Return(nil)
+
+		clientService := createClientService(service)
+		err := clientService.Create(data_builders.NewClientBuilder().Build())
+
+		sCtx.Assert().NoError(err)
+	})
+}
+
+func (s *ClientSuite) TestCreateClientFailure(t provider.T) {
+	t.Title("CreateClient: Failure")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByTelephone(ctx, "").Return(nil, errors.New("validation error"))
+
+		clientService := createClientService(service)
+		err := clientService.Create(data_builders.NewClientBuilder().WithTelephone("").Build())
+
+		sCtx.Assert().Error(err)
+	})
+}
+
+func (s *ClientSuite) TestLoginClientSuccess(t provider.T) {
+	t.Title("LoginClient: Success")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
 				Return(data_builders.NewClientBuilder().Build(), nil)
-		},
-		CheckOutput: func(t *testing.T, client *models.Client, err error) {
-			assert.NoError(t, err)
-			assert.NotNil(t, client)
-		},
-	},
-	{
-		TestName:   "login with incorrect password",
-		Tel:        "1234567890",
-		Password:   "111",
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
+
+		clientService := createClientService(service)
+		client, err := clientService.Login("1234567890", "123")
+
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().NotNil(client)
+		sCtx.Assert().Equal(data_builders.NewClientBuilder().Build(), client)
+	})
+}
+
+func (s *ClientSuite) TestLoginClientFailure(t provider.T) {
+	t.Title("LoginClient: Failure")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByTelephone(ctx, "1234567890").
 				Return(data_builders.NewClientBuilder().Build(), nil)
-		},
-		CheckOutput: func(t *testing.T, client *models.Client, err error) {
-			assert.Error(t, err)
-			assert.Nil(t, client)
-		},
-	},
+
+		clientService := createClientService(service)
+		client, err := clientService.Login("1234567890", "111")
+
+		sCtx.Assert().Error(err)
+		sCtx.Assert().Nil(client)
+	})
 }
 
-var testGetClientByID = []struct {
-	TestName  string
-	ID        uint64
-	Prepare   func(service *mockClientService)
-	CheckOutput func(t *testing.T, client *models.Client, err error)
-}{
-	{
-		TestName:  "success get client by ID",
-		ID:        1,
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).
-				Return(data_builders.NewClientBuilder().Build(), nil)
-		},
-		CheckOutput: func(t *testing.T, client *models.Client, err error) {
-			assert.NoError(t, err)
-			assert.NotNil(t, client)
-			assert.Equal(t, uint64(1), client.ID)
-		},
-	},
-	{
-		TestName:  "error getting client by ID",
-		ID:        999,
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(999)).
-				Return(nil, errors.New("not found"))
-		},
-		CheckOutput: func(t *testing.T, client *models.Client, err error) {
-			assert.Error(t, err)
-			assert.Nil(t, client)
-		},
-	},
+func (s *ClientSuite) TestGetClientByIDSuccess(t provider.T) {
+	t.Title("GetClientByID: Success")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
+
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
+
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).Return(data_builders.NewClientBuilder().Build(), nil)
+
+		clientService := createClientService(service)
+		client, err := clientService.GetByID(uint64(1))
+
+		sCtx.Assert().NoError(err)
+		sCtx.Assert().NotNil(client)
+		sCtx.Assert().Equal(data_builders.NewClientBuilder().Build(), client)
+	})
 }
 
-var testCreateAssignment = []struct {
-	TestName        string
-	ClientID        uint64
-	TrainingID      uint64
-	DirectionID     uint64
-	SubscriptionID  uint64
-	Prepare      func(service *mockClientService)
-	CheckOutput  func(t *testing.T, err error)
-}{
-	{
-		TestName:    "success create assignment",
-		ClientID:    1,
-		TrainingID:  1,
-		DirectionID: 1,
-		SubscriptionID: 1,
+func (s *ClientSuite) TestGetClientByIDFailure(t provider.T) {
+	t.Title("GetClientByID: Failure")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
 
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			client := data_builders.NewClientBuilder().Build()
-			training := data_builders.NewTrainingBuilder().Build()
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).Return(client, nil)
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(1)).Return(training, nil)
-			service.mockTrainingRepository.EXPECT().GetAllByClient(ctx, client.ID).Return(nil, nil)
-			service.mockTransactionManager.EXPECT().WithinTransaction(ctx, gomock.Any()).Return(nil)
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.NoError(t, err)
-		},
-	},
-	{
-		TestName:    "error create assignment due to no available places",
-		ClientID:    1,
-		TrainingID:  1,
-		Prepare: func(service *mockClientService) {
-			ctx := context.Background()
-			client := data_builders.NewClientBuilder().Build()
-			training := data_builders.NewTrainingBuilder().WithPlacesNum(0).Build()
+		service := createMockClientService(ctrl)
+		service.mockClientRepository.EXPECT().GetByID(ctx, uint64(999)).Return(nil, errors.New("not found"))
 
-			service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).Return(client, nil)
-			service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(1)).Return(training, nil)
+		clientService := createClientService(service)
+		client, err := clientService.GetByID(uint64(999))
 
-		},
-		CheckOutput: func(t *testing.T, err error) {
-			assert.Error(t, err)
-			assert.Equal(t, servicesErrors.NoAvailablePlacesNum, err)
-		},
-	},
+		sCtx.Assert().Error(err)
+		sCtx.Assert().Nil(client)
+	})
 }
 
-func TestClientServiceImplementation(t *testing.T) {
-	for _, tt := range testGetByTelephone {
-		t.Run(tt.TestName, func(t *testing.T) {
-			ctrl := gomock.NewController(t)
-			defer ctrl.Finish()
+func (s *ClientSuite) TestCreateAssignmentSuccess(t provider.T) {
+	t.Title("CreateAssignment: Success")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
 
-			service := createMockClientService(ctrl)
-			tt.Prepare(service)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-			clientService := createClientService(service)
+		service := createMockClientService(ctrl)
+		client := data_builders.NewClientBuilder().Build()
+		training := data_builders.NewTrainingBuilder().Build()
 
-			client, err := clientService.GetByTelephone(tt.InputData)
-			tt.CheckOutput(t, client, err)
-		})
-	}
-	t.Run("GetByTelephone", func(t *testing.T) {
-		for _, tt := range testGetByTelephone {
-			tt := tt
-			t.Run(tt.TestName, func(t *testing.T) {
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
+		service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).Return(client, nil)
+		service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(1)).Return(training, nil)
+		service.mockTrainingRepository.EXPECT().GetAllByClient(ctx, client.ID).Return(nil, nil)
+		service.mockTransactionManager.EXPECT().WithinTransaction(ctx, gomock.Any()).Return(nil)
 
-				service := createMockClientService(ctrl)
-				tt.Prepare(service)
+		clientService := createClientService(service)
+		err := clientService.CreateAssignment(uint64(1), uint64(1))
 
-				clientService := createClientService(service)
-				client, err := clientService.GetByTelephone(tt.InputData)
-
-				tt.CheckOutput(t, client, err)
-			})
-		}
+		sCtx.Assert().NoError(err)
 	})
+}
 
-	t.Run("Create", func(t *testing.T) {
-		for _, tt := range testCreateClient {
-			tt := tt
-			t.Run(tt.TestName, func(t *testing.T) {
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
+func (s *ClientSuite) TestCreateAssignmentFailure(t provider.T) {
+	t.Title("CreateAssignment: Failure")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
 
-				service := createMockClientService(ctrl)
-				tt.Prepare(service)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-				clientService := createClientService(service)
-				err := clientService.Create(tt.InputData)
+		service := createMockClientService(ctrl)
+		client := data_builders.NewClientBuilder().Build()
+		training := data_builders.NewTrainingBuilder().WithPlacesNum(0).Build()
 
-				tt.CheckOutput(t, err)
-			})
-		}
+		service.mockClientRepository.EXPECT().GetByID(ctx, uint64(1)).Return(client, nil)
+		service.mockTrainingRepository.EXPECT().GetByID(ctx, uint64(1)).Return(training, nil)
+
+		clientService := createClientService(service)
+		err := clientService.CreateAssignment(uint64(1), uint64(1))
+
+		sCtx.Assert().Error(err)
 	})
+}
 
-	t.Run("Login", func(t *testing.T) {
-		for _, tt := range testLogin {
-			tt := tt
-			t.Run(tt.TestName, func(t *testing.T) {
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
+func (s *ClientSuite) TestDeleteAssignmentSuccess(t provider.T) {
+	t.Title("DeleteAssignment: Success")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Success", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
 
-				service := createMockClientService(ctrl)
-				tt.Prepare(service)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-				clientService := createClientService(service)
-				client, err := clientService.Login(tt.Tel, tt.Password)
+		service := createMockClientService(ctrl)
 
-				tt.CheckOutput(t, client, err)
-			})
-		}
+		service.mockTransactionManager.EXPECT().WithinTransaction(ctx, gomock.Any()).Return(nil)
+
+		clientService := createClientService(service)
+		err := clientService.DeleteAssignment(uint64(1), uint64(1))
+
+		sCtx.Assert().NoError(err)
 	})
+}
 
-	t.Run("GetByID", func(t *testing.T) {
-		for _, tt := range testGetClientByID {
-			tt := tt
-			t.Run(tt.TestName, func(t *testing.T) {
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
+func (s *ClientSuite) TestDeleteAssignmentFailure(t provider.T) {
+	t.Title("DeleteAssignment: Failure")
+	t.Tags("Client")
+	t.Parallel()
+	t.WithNewStep("Failure", func(sCtx provider.StepCtx) {
+		ctx := context.Background()
 
-				service := createMockClientService(ctrl)
-				tt.Prepare(service)
+		ctrl := gomock.NewController(t)
+		defer ctrl.Finish()
 
-				clientService := createClientService(service)
-				client, err := clientService.GetByID(tt.ID)
+		service := createMockClientService(ctrl)
 
-				tt.CheckOutput(t, client, err)
-			})
-		}
+		service.mockTransactionManager.EXPECT().WithinTransaction(ctx, gomock.Any()).Return(errors.New("error"))
+
+		clientService := createClientService(service)
+		err := clientService.DeleteAssignment(uint64(1), uint64(1))
+
+		sCtx.Assert().Error(err)
 	})
+}
 
-	t.Run("CreateAssignment", func(t *testing.T) {
-		for _, tt := range testCreateAssignment {
-			tt := tt
-			t.Run(tt.TestName, func(t *testing.T) {
-				ctrl := gomock.NewController(t)
-				defer ctrl.Finish()
-
-				service := createMockClientService(ctrl)
-				tt.Prepare(service)
-
-				clientService := createClientService(service)
-				err := clientService.СreateAssignment(tt.ClientID, tt.TrainingID)
-
-				tt.CheckOutput(t, err)
-			})
-		}
-	})
+func TestClientSuiteRunner(t *testing.T) {
+	suite.RunSuite(t, new(ClientSuite))
 }

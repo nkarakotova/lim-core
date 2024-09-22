@@ -108,16 +108,16 @@ func (mr *MockClientRepositoryMockRecorder) GetByTraining(ctx, id interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetByTraining", reflect.TypeOf((*MockClientRepository)(nil).GetByTraining), ctx, id)
 }
 
-// СreateAssignment mocks base method.
-func (m *MockClientRepository) СreateAssignment(ctx context.Context, clientID, trainingID uint64) error {
+// CreateAssignment mocks base method.
+func (m *MockClientRepository) CreateAssignment(ctx context.Context, clientID, trainingID uint64) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "СreateAssignment", ctx, clientID, trainingID)
+	ret := m.ctrl.Call(m, "CreateAssignment", ctx, clientID, trainingID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// СreateAssignment indicates an expected call of СreateAssignment.
-func (mr *MockClientRepositoryMockRecorder) СreateAssignment(ctx, clientID, trainingID interface{}) *gomock.Call {
+// CreateAssignment indicates an expected call of CreateAssignment.
+func (mr *MockClientRepositoryMockRecorder) CreateAssignment(ctx, clientID, trainingID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "СreateAssignment", reflect.TypeOf((*MockClientRepository)(nil).СreateAssignment), ctx, clientID, trainingID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAssignment", reflect.TypeOf((*MockClientRepository)(nil).CreateAssignment), ctx, clientID, trainingID)
 }

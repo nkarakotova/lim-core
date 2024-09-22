@@ -12,6 +12,6 @@ type ClientRepository interface {
 	GetByID(ctx context.Context, id uint64) (*models.Client, error)
 	GetByTelephone(ctx context.Context, telephone string) (*models.Client, error)
 	GetByTraining(ctx context.Context, id uint64) ([]models.Client, error)
-	СreateAssignment(ctx context.Context, clientID, trainingID uint64) error
+	CreateAssignment(ctx context.Context, clientID, trainingID uint64) error
 	DeleteAssignment(ctx context.Context, clientID, trainingID uint64) error
 }

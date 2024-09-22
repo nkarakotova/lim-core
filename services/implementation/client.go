@@ -170,9 +170,9 @@ func (c *ClientServiceImplementation) createAssignmentChecks(ctx context.Context
 
 func (c *ClientServiceImplementation) createAssignment(ctx context.Context, client *models.Client, training *models.Training) error {
 	return c.TransactionManager.WithinTransaction(ctx, func(txCtx context.Context) error {
-		err := c.ClientRepository.СreateAssignment(ctx, client.ID, training.ID)
+		err := c.ClientRepository.CreateAssignment(ctx, client.ID, training.ID)
 		if err != nil {
-			c.logger.Warn("CLIENT! Error in repository СreateAssignment", "clientID", client.ID, "trainingID", training.ID, "error", err)
+			c.logger.Warn("CLIENT! Error in repository CreateAssignment", "clientID", client.ID, "trainingID", training.ID, "error", err)
 			return err
 		}
 
@@ -186,7 +186,7 @@ func (c *ClientServiceImplementation) createAssignment(ctx context.Context, clie
 	})
 }
 
-func (c *ClientServiceImplementation) СreateAssignment(clientID, trainingID uint64) error {
+func (c *ClientServiceImplementation) CreateAssignment(clientID, trainingID uint64) error {
 	ctx := context.Background()
 
 	client, err := c.ClientRepository.GetByID(ctx, clientID)

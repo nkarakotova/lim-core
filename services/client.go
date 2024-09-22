@@ -7,6 +7,6 @@ type ClientService interface {
 	Login(telephone, password string) (*models.Client, error)
 	GetByID(id uint64) (*models.Client, error)
 	GetByTelephone(login string) (*models.Client, error)
-	СreateAssignment(clientID, trainingID uint64) error
+	CreateAssignment(clientID, trainingID uint64) error
 	DeleteAssignment(clientID, trainingID uint64) error
 }
